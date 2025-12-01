@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="utf-8"?>
+<modification>
+    <name>Admin Product Tag Filter</name>
+    <code>admin_product_tag_filter</code>
+    <version>1.0.0</version>
+    <author>OpenCart Community</author>
+    <link>https://github.com/yourusername/opencart-product-tag-filter</link>
+    
+    <!-- 
+        OCMOD Extension for OpenCart 3.0.x
+        Adds tag filtering capability to admin product list
+        
+        Compatible with: OpenCart 3.0.x
+        Tested on: 3.0.4.1
+        
+        References: 
+        - https://docs.opencart.com/en-gb/extension/modifications/
+        - https://opencart.gitbook.io/opencart/developer-guide/extensions
+    -->
+    
+    <!-- MODIFICATION 1: Add tag filter to Model SQL query -->
+    <file path="admin/model/catalog/product.php">
+        <operation>
+            <search><![CDATA[
+		if (!empty($data['filter_model'])) {
+			$sql .= " AND p.model LIKE '" . $this->db->escape($data['filter_model']) . "%'";
+		}
+            ]]></search>
+            <add position="after"><![CDATA[
+		
+		// Tag filter added by OCMOD - filters products by tag
+		// Searches partial matches in the tag field of product_description table
+		if (!empty($data['filter_tag'])) {
+			$sql .= " AND pd.tag LIKE '%" . $this->db->escape($data['filter_tag']) . "%'";
+		}
+            ]]></add>
+        </operation>
+    </file>
+    
+    <!-- MODIFICATION 2: Add tag filter parameter in Controller -->
+    <file path="admin/controller/catalog/product.php">
+        <!-- Add filter_tag parameter initialization -->
+        <operation>
+            <search><![CDATA[
+		if (isset($this->request->get['filter_model'])) {
+			$filter_model = $this->request->get['filter_model'];
+		} else {
+			$filter_model = '';
+		}
+            ]]></search>
+            <add position="after"><![CDATA[
+		
+		// Tag filter parameter added by OCMOD
+		if (isset($this->request->get['filter_tag'])) {
+			$filter_tag = $this->request->get['filter_tag'];
+		} else {
+			$filter_tag = '';
+		}
+            ]]></add>
+        </operation>
+        
+        <!-- Add filter_tag to filter_data array -->
+        <operation>
+            <search><![CDATA[
+		$filter_data = array(
+			'filter_name'	  => $filter_name,
+			'filter_model'	  => $filter_model,
+            ]]></search>
+            <add position="after"><![CDATA[
+			'filter_tag'      => $filter_tag,
+            ]]></add>
+        </operation>
+        
+        <!-- Add filter_tag to URL parameters for pagination -->
+        <operation>
+            <search><![CDATA[
+		$url = '';
+
+		if (isset($this->request->get['filter_name'])) {
+			$url .= '&filter_name=' . urlencode(html_entity_decode($this->request->get['filter_name'], ENT_QUOTES, 'UTF-8'));
+		}
+
+		if (isset($this->request->get['filter_model'])) {
+			$url .= '&filter_model=' . urlencode(html_entity_decode($this->request->get['filter_model'], ENT_QUOTES, 'UTF-8'));
+		}
+            ]]></search>
+            <add position="after"><![CDATA[
+		
+		// Tag filter URL parameter added by OCMOD
+		if (isset($this->request->get['filter_tag'])) {
+			$url .= '&filter_tag=' . urlencode(html_entity_decode($this->request->get['filter_tag'], ENT_QUOTES, 'UTF-8'));
+		}
+            ]]></add>
+        </operation>
+        
+        <!-- Pass filter_tag to view -->
+        <operation>
+            <search><![CDATA[
+		$data['filter_name'] = $filter_name;
+		$data['filter_model'] = $filter_model;
+            ]]></search>
+            <add position="after"><![CDATA[
+		$data['filter_tag'] = $filter_tag;
+            ]]></add>
+        </operation>
+    </file>
+    
+    <!-- MODIFICATION 3: Add tag filter input field to View -->
+    <file path="admin/view/template/catalog/product_list.twig">
+        <operation>
+            <search><![CDATA[
+            <div class="col-sm-4">
+              <div class="form-group">
+                <label class="control-label" for="input-model">{{ entry_model }}</label>
+                <input type="text" name="filter_model" value="{{ filter_model }}" placeholder="{{ entry_model }}" id="input-model" class="form-control" />
+              </div>
+            </div>
+            ]]></search>
+            <add position="after"><![CDATA[
+            <div class="col-sm-4">
+              <div class="form-group">
+                <label class="control-label" for="input-tag">Tag</label>
+                <input type="text" name="filter_tag" value="{{ filter_tag }}" placeholder="Tag" id="input-tag" class="form-control" />
+              </div>
+            </div>
+            ]]></add>
+        </operation>
+    </file>
+</modification>
